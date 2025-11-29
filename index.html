@@ -164,6 +164,7 @@
             <thead>
                 <tr>
                     <th>Nome</th>
+                    <th>Nome Social</th>
                     <th>Idade</th>
                     <th>Nº SUS</th>
                     <th>Mãe</th>
@@ -182,6 +183,9 @@
 
         <label>Nome Completo</label>
         <input id="nome">
+
+        <label>Nome Social</label>
+        <input id="nomeSocial">
 
         <label>Data de Nascimento</label>
         <input id="nascimento" type="date" onchange="calcularIdade()">
@@ -244,7 +248,6 @@
         <h3>Lista de Exames</h3>
         <ul id="listaExames"></ul>
     </div>
-
 </div>
 
 <script>
@@ -252,7 +255,7 @@
 let pacientes = JSON.parse(localStorage.getItem("pacientes")) || [];
 let pacienteSelecionado = null;
 
-/* =============== FUNÇÕES BÁSICAS ================= */
+/* =============== FUNÇÕES GERAIS ================= */
 
 function mostrarTela(id){
     ["telaLista","telaCadastro","telaExames","cardExamesArquivos"]
@@ -285,6 +288,7 @@ function atualizarLista(){
         tb.innerHTML += `
         <tr>
             <td>${p.nome}</td>
+            <td>${p.nomeSocial || ""}</td>
             <td>${p.idade}</td>
             <td>${p.sus}</td>
             <td>${p.mae}</td>
@@ -305,16 +309,17 @@ atualizarLista();
 function novoPaciente(){
     pacienteSelecionado = null;
 
-    ["nome","nascimento","idade","sus","mae","sexo","prontuario","cid","obs"]
+    ["nome","nomeSocial","nascimento","idade","sus","mae","sexo","prontuario","cid","obs"]
     .forEach(id => document.getElementById(id).value = "");
 
     mostrarTela("telaCadastro");
 }
 
-/* =============== SALVAR PACIENTE (CORRIGIDO) ================= */
+/* =============== SALVAR PACIENTE (COM NOME SOCIAL) ================= */
 
 function salvarPaciente(){
     const nome        = document.getElementById("nome").value.trim();
+    const nomeSocial  = document.getElementById("nomeSocial").value.trim();
     const nascimento  = document.getElementById("nascimento").value;
     const idade       = document.getElementById("idade").value;
     const sus         = document.getElementById("sus").value.trim();
@@ -338,8 +343,16 @@ function salvarPaciente(){
         ? pacientes[pacienteSelecionado].exames : [];
 
     const p = {
-        nome, nascimento, idade, sus, mae, sexo,
-        prontuario, cid, obs,
+        nome, 
+        nomeSocial,
+        nascimento, 
+        idade, 
+        sus, 
+        mae, 
+        sexo,
+        prontuario,
+        cid,
+        obs,
         avaliacoes: avaliacoesExistentes,
         exames: examesExistentes
     };
@@ -362,6 +375,7 @@ function editarPaciente(i){
     const p = pacientes[i];
 
     document.getElementById("nome").value = p.nome;
+    document.getElementById("nomeSocial").value = p.nomeSocial || "";
     document.getElementById("nascimento").value = p.nascimento;
     document.getElementById("idade").value = p.idade;
     document.getElementById("sus").value = p.sus;
@@ -405,18 +419,19 @@ function avaliar(){
 
     if(neutV && neutV < 1500){ status="Não Apto"; motivos.push("Neutrófilos < 1500"); }
     if(platV && platV < 100000){ status="Não Apto"; motivos.push("Plaquetas < 100.000"); }
-    if(hbV && hbV < 8){ if(status!=="Não Apto") status="Reavaliar"; motivos.push("Hb < 8"); }
-    if(tgoV>80 || tgpV>80){ if(status!=="Não Apto") status="Reavaliar"; motivos.push("TGO/TGP elevados"); }
+    if(hbV && hbV < 8){ if(status!=="Não Apto") status="Reavaliar"; motivos.push("Hemoglobina < 8"); }
+    if(tgoV>80 || tgpV>80){ if(status!=="Não Apto") status="Reavaliar"; motivos.push("TGO/TGP alterados"); }
     if(biliV>1.5){ status="Não Apto"; motivos.push("Bilirrubina > 1.5"); }
-    if(tfgV<30){ status="Não Apto"; motivos.push("TFG < 30"); }
+    if(tfgV < 30){ status="Não Apto"; motivos.push("TFG < 30"); }
 
-    let risco="",classe="";
+    let risco = "";
+    let classe = "";
     if(status=="Não Apto"){ risco="Alto risco"; classe="risco-alto"; }
     else if(status=="Reavaliar"){ risco="Risco moderado"; classe="risco-moderado"; }
     else { risco="Baixo risco"; classe="risco-baixo"; }
 
     const r = document.getElementById("resultado");
-    r.style.display="block";
+    r.style.display = "block";
     r.className = "resultado " +
         (status=="Apto" ? "ok" :
          status=="Reavaliar" ? "alerta" : "erro");
@@ -424,7 +439,7 @@ function avaliar(){
     r.innerHTML = `
         <h3>${status}</h3>
         <span class="tag ${classe}">${risco}</span>
-        <p><b>Justificativas:</b><br>${motivos.join("<br>")}</p>
+        <p><b>Motivos:</b><br>${motivos.join("<br>")}</p>
 
         <button class="btn azul" onclick="avaliarPaciente(${pacienteSelecionado})">Nova Avaliação</button>
         <button class="btn cinza" onclick="mostrarTela('telaLista')">Voltar</button>
@@ -433,7 +448,8 @@ function avaliar(){
 
     pacientes[pacienteSelecionado].avaliacoes.push({
         dataHora: new Date().toISOString(),
-        status, risco,
+        status: status,
+        risco: risco,
         neut: neutV, plat: platV, hb: hbV,
         tgo: tgoV, tgp: tgpV, bili: biliV,
         creat: creatV, tfg: tfgV
@@ -455,17 +471,17 @@ function gerarPDF(status, risco, motivos){
 
     doc.setFontSize(12);
     doc.text(`Paciente: ${p.nome}`, 20, 40);
-    doc.text(`Mãe: ${p.mae}`, 20, 50);
-    doc.text(`Nascimento: ${p.nascimento}`, 20, 60);
-    doc.text(`Idade: ${p.idade}`, 20, 70);
-    doc.text(`Nº SUS: ${p.sus}`, 20, 80);
-    doc.text(`Prontuário: ${p.prontuario}`, 20, 90);
-    doc.text(`CID: ${p.cid}`, 20, 100);
+    doc.text(`Nome Social: ${p.nomeSocial || "-"}`, 20, 50);
+    doc.text(`Mãe: ${p.mae}`, 20, 60);
+    doc.text(`Nascimento: ${p.nascimento}`, 20, 70);
+    doc.text(`Idade: ${p.idade}`, 20, 80);
+    doc.text(`Nº SUS: ${p.sus}`, 20, 90);
+    doc.text(`Prontuário: ${p.prontuario}`, 20, 100);
+    doc.text(`CID: ${p.cid}`, 20, 110);
 
-    doc.text(`Status: ${status}`, 20, 120);
-    doc.text(`Risco: ${risco}`, 20, 130);
-
-    doc.text("Justificativas:", 20, 160);
+    doc.text(`Status: ${status}`, 20, 130);
+    doc.text(`Risco: ${risco}`, 20, 140);
+    doc.text("Motivos:", 20, 160);
     doc.text(motivos, 20, 170);
 
     doc.save("laudo_"+p.nome+".pdf");
@@ -474,10 +490,10 @@ function gerarPDF(status, risco, motivos){
 /* =============== EXAMES ================= */
 
 function atualizarListaExames(){
-    const card = document.getElementById("cardExamesArquivos");
     const ul = document.getElementById("listaExames");
-
+    const card = document.getElementById("cardExamesArquivos");
     const p = pacientes[pacienteSelecionado];
+
     card.style.display = "block";
 
     if(!p.exames || p.exames.length === 0){
@@ -488,14 +504,15 @@ function atualizarListaExames(){
     let html = "";
     p.exames.forEach((ex,i)=>{
         const dataLabel = new Date(ex.dataHora)
-            .toLocaleString("pt-BR",{dateStyle:"short", timeStyle:"short"});
-
+            .toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
         html += `
         <li style="margin-bottom:10px;">
             <strong>${ex.nome}</strong> (${dataLabel})
             - <a href="${ex.dados}" target="_blank">Ver</a>
             <button class="btn vermelho" style="padding:4px 8px; font-size:12px;"
-                    onclick="removerExame(${i})">Remover</button>
+                    onclick="removerExame(${i})">
+                Remover
+            </button>
         </li>`;
     });
 
@@ -508,15 +525,14 @@ function anexarExame(){
 
     const reader = new FileReader();
     reader.onload = function(e){
-        const dataUrl = e.target.result;
-
         const p = pacientes[pacienteSelecionado];
+
         if(!p.exames) p.exames = [];
 
         p.exames.push({
             nome: file.name,
             tipo: file.type,
-            dados: dataUrl,
+            dados: e.target.result,
             dataHora: new Date().toISOString()
         });
 
@@ -528,11 +544,8 @@ function anexarExame(){
 }
 
 function removerExame(i){
-    if(!confirm("Remover este exame?")) return;
-
     const p = pacientes[pacienteSelecionado];
     p.exames.splice(i,1);
-
     localStorage.setItem("pacientes", JSON.stringify(pacientes));
     atualizarListaExames();
 }
@@ -540,7 +553,7 @@ function removerExame(i){
 /* =============== EXCLUIR ================= */
 
 function excluirPaciente(i){
-    if(confirm("Excluir este paciente?")){
+    if(confirm("Excluir paciente?")){
         pacientes.splice(i,1);
         localStorage.setItem("pacientes", JSON.stringify(pacientes));
         atualizarLista();
