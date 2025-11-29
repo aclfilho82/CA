@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Plataforma Pré-Quimioterapia</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- jsPDF para gerar PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #eef2f7;
+        margin: 0;
+    }
+
+    header {
+        background: #003366;
+        padding: 22px;
+        color: white;
+        text-align: center;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .container {
+        max-width: 1000px;
+        margin: 35px auto;
+        padding: 20px;
+    }
+
+    .card {
+        background: white;
+        padding: 25px;
+        border-radius: 14px;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 25px;
+    }
+
+    h2 {
+        color: #003366;
+        margin-bottom: 18px;
+        border-left: 5px solid #0066cc;
+        padding-left: 10px;
+    }
+
+    h4 {
+        margin-top: 20px;
+        margin-bottom: 8px;
+        color: #003366;
+    }
+
+    label {
+        font-weight: 600;
+        color: #333;
+        display: block;
+        margin-top: 10px;
+    }
+
+    input, textarea, select {
+        width: 90%;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccd4dd;
+        font-size: 15px;
+        margin-top: 4px;
+    }
+
+    textarea { resize: none; height: 80px; }
+
+    .btn {
+        background: #007bff;
+        color: white;
+        padding: 10px 16px;
+        font-size: 14px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 10px;
+        margin-right: 6px;
+    }
+
+    .btn:hover { background: #0056b3; }
+
+    .btn-pdf {
+        background: #2e7d32;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    th {
+        background: #003366;
+        color: white;
+    }
+
+    .resultado {
+        padding: 20px;
+        border-radius: 12px;
+        font-size: 15px;
+        display: none;
+    }
+
+    .ok { background: #dbffe1; border-left: 8px solid #1f8f3a; }
+    .alerta { background: #fff7d1; border-left: 8px solid #d4a017; }
+    .erro { background: #ffe0e0; border-left: 8px solid #b30000; }
+
+    ul {
+        padding-left: 18px;
+        font-size: 14px;
+    }
+
+    ul li {
+        margin-bottom: 6px;
+    }
+
+    .tag-risco {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .risco-baixo    { background:#d6f5e3; color:#0f6b39; }
+    .risco-moderado { background:#fff2c2; color:#9a7700; }
+    .risco-alto     { background:#ffd4d4; color:#a30000; }
+</style>
+</head>
+<body>
+
+<header>
+    Plataforma de Apoio Pré-Quimioterapia
+</header>
+
+<div class="container">
+
+    <!-- TELA LISTA -->
+    <div id="telaLista" class="card" style="display:block;">
+        <h2>Pacientes Cadastrados</h2>
+
+        <button class="btn" onclick="novoPaciente()">+ Novo Paciente</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Idade</th>
+                    <th>Sexo</th>
+                    <th>Prontuário</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaPacientes"></tbody>
+        </table>
+    </div>
+
+    <!-- TELA CADASTRO -->
+    <div id="telaCadastro" class="card" style="display:none;">
+        <h2>Cadastro do Paciente</h2>
+
+        <label for="nome">Nome Completo</label>
+        <input id="nome">
+
+        <label for="idade">Idade</label>
+        <input id="idade" type="number">
+
+        <label for="sexo">Sexo</label>
+        <select id="sexo">
+            <option value="">Selecione...</option>
+            <option>Masculino</option>
+            <option>Feminino</option>
+            <option>Outro</option>
+        </select>
+
+        <label for="prontuario">Prontuário</label>
+        <input id="prontuario">
+
+        <label for="cid">CID</label>
+        <input id="cid">
+
+        <label for="obs">Observações</label>
+        <textarea id="obs"></textarea>
+
+        <button class="btn" onclick="salvarPaciente()">Salvar</button>
+        <button class="btn" style="background:#555;" onclick="voltarParaListaSimples()">Cancelar</button>
+    </div>
+
+    <!-- TELA EXAMES LABORATORIAIS -->
+    <div id="telaExames" class="card" style="display:none;">
+        <h2>Avaliação Laboratorial – <span id="nomePacienteTitulo"></span></h2>
+
+        <label for="neut">Neutrófilos (/mm³)</label>
+        <input id="neut">
+
+        <label for="plat">Plaquetas (/mm³)</label>
+        <input id="plat">
+
+        <label for="hb">Hemoglobina (g/dL)</label>
+        <input id="hb">
+
+        <label for="tgo">TGO (AST)</label>
+        <input id="tgo">
+
+        <label for="tgp">TGP (ALT)</label>
+        <input id="tgp">
+
+        <label for="bili">Bilirrubina Total</label>
+        <input id="bili">
+
+        <label for="creat">Creatinina</label>
+        <input id="creat">
+
+        <label for="tfg">TFG</label>
+        <input id="tfg">
+
+        <button class="btn" onclick="avaliar()">Avaliar</button>
+    </div>
+
+    <!-- RESULTADO -->
+    <div id="resultado" class="resultado card"></div>
+
+    <!-- EXAMES ANEXADOS (PDF/IMAGENS) -->
+    <div id="cardExamesArquivos" class="card" style="display:none;">
+        <h2>Exames Anexados</h2>
+        <p style="font-size:13px; color:#555;">
+            Anexe laudos em PDF ou imagens relacionadas ao paciente selecionado.
+        </p>
+
+        <input type="file" id="inputExame" accept=".pdf,image/*">
+        <button class="btn" onclick="anexarExame()">Anexar exame</button>
+
+        <h4 style="margin-top:18px;">Lista de exames</h4>
+        <ul id="listaExames"></ul>
+    </div>
+
+</div>
+
+<script>
+let pacientes = JSON.parse(localStorage.getItem("pacientes")) || [];
+let pacienteSelecionado = null;
+
+function salvarPacientesLS(){
+    localStorage.setItem("pacientes", JSON.stringify(pacientes));
+}
+
+function atualizarLista(){
+    const tbody = document.getElementById("listaPacientes");
+    let html = "";
+    pacientes.forEach((p, i) => {
+        html += `
+        <tr>
+            <td>${p.nome}</td>
+            <td>${p.idade}</td>
+            <td>${p.sexo}</td>
+            <td>${p.prontuario}</td>
+            <td>
+                <button class="btn" style="background:#ffaa00;" onclick="editarPaciente(${i})">Editar</button>
+                <button class="btn" style="background:#28a745;" onclick="avaliarPaciente(${i})">Avaliar</button>
+                <button class="btn" style="background:#b30000;" onclick="excluirPaciente(${i})">Excluir</button>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+}
+atualizarLista();
+
+function mostrarTela(id){
+    document.getElementById("telaLista").style.display = "none";
+    document.getElementById("telaCadastro").style.display = "none";
+    document.getElementById("telaExames").style.display = "none";
+    document.getElementById(id).style.display = "block";
+}
+
+function novoPaciente(){
+    pacienteSelecionado = null;
+
+    document.getElementById("nome").value = "";
+    document.getElementById("idade").value = "";
+    document.getElementById("sexo").value = "";
+    document.getElementById("prontuario").value = "";
+    document.getElementById("cid").value = "";
+    document.getElementById("obs").value = "";
+
+    mostrarTela("telaCadastro");
+}
+
+function salvarPaciente(){
+    const nome   = document.getElementById("nome").value.trim();
+    const idade  = document.getElementById("idade").value.trim();
+    const sexo   = document.getElementById("sexo").value;
+    const pront  = document.getElementById("prontuario").value.trim();
+    const cid    = document.getElementById("cid").value.trim();
+    const obs    = document.getElementById("obs").value.trim();
+
+    if(!nome){
+        alert("Informe o nome do paciente.");
+        return;
+    }
+
+    const avaliacoesExistentes = (pacienteSelecionado !== null && pacientes[pacienteSelecionado].avaliacoes)
+        ? pacientes[pacienteSelecionado].avaliacoes
+        : [];
+
+    const examesExistentes = (pacienteSelecionado !== null && pacientes[pacienteSelecionado].exames)
+        ? pacientes[pacienteSelecionado].exames
+        : [];
+
+    const p = {
+        nome: nome,
+        idade: idade,
+        sexo: sexo,
+        prontuario: pront,
+        cid: cid,
+        obs: obs,
+        avaliacoes: avaliacoesExistentes,
+        exames: examesExistentes
+    };
+
+    if(pacienteSelecionado === null)
+        pacientes.push(p);
+    else
+        pacientes[pacienteSelecionado] = p;
+
+    salvarPacientesLS();
+    atualizarLista();
+    mostrarTela("telaLista");
+}
+
+function editarPaciente(i){
+    pacienteSelecionado = i;
+    const p = pacientes[i];
+
+    document.getElementById("nome").value = p.nome;
+    document.getElementById("idade").value = p.idade;
+    document.getElementById("sexo").value = p.sexo;
+    document.getElementById("prontuario").value = p.prontuario;
+    document.getElementById("cid").value = p.cid || "";
+    document.getElementById("obs").value = p.obs || "";
+
+    mostrarTela("telaCadastro");
+}
+
+function avaliarPaciente(i){
+    pacienteSelecionado = i;
+
+    const p = pacientes[i];
+    document.getElementById("nomePacienteTitulo").innerText = p.nome;
+
+    novaAvaliacao();
+    document.getElementById("resultado").style.display = "none";
+
+    mostrarTela("telaExames");
+    atualizarListaExames();
+}
+
+function avaliar(){
+    const neutV  = Number(document.getElementById("neut").value);
+    const platV  = Number(document.getElementById("plat").value);
+    const hbV    = Number(document.getElementById("hb").value);
+    const tgoV   = Number(document.getElementById("tgo").value);
+    const tgpV   = Number(document.getElementById("tgp").value);
+    const biliV  = Number(document.getElementById("bili").value);
+    const creatV = Number(document.getElementById("creat").value);
+    const tfgV   = Number(document.getElementById("tfg").value);
+
+    let status = "Apto";
+    let justificativas = [];
+
+    if(neutV < 1500){ status = "Não Apto"; justificativas.push("Neutrófilos < 1500"); }
+    if(platV < 100000){ status = "Não Apto"; justificativas.push("Plaquetas < 100.000"); }
+    if(hbV < 8){ 
+        if(status !== "Não Apto") status = "Reavaliar";
+        justificativas.push("Hemoglobina baixa (< 8 g/dL)"); 
+    }
+    if(tgoV > 80 || tgpV > 80){ 
+        if(status !== "Não Apto") status = "Reavaliar";
+        justificativas.push("Alteração de TGO/TGP (> 2x LSN aproximado)"); 
+    }
+    if(biliV > 1.5){ status = "Não Apto"; justificativas.push("Bilirrubina Total > 1,5"); }
+    if(tfgV < 30){ status = "Não Apto"; justificativas.push("TFG < 30 mL/min"); }
+    else if(tfgV < 60){ 
+        if(status !== "Não Apto") status = "Reavaliar";
+        justificativas.push("TFG entre 30 e 60 mL/min"); 
+    }
+
+    // Classificação de risco (Recurso 7)
+    let riscoClinico = "";
+    let classeRiscoCSS = "";
+    if(status === "Não Apto"){
+        riscoClinico = "Alto risco";
+        classeRiscoCSS = "risco-alto";
+    } else if(status === "Reavaliar"){
+        riscoClinico = "Risco moderado";
+        classeRiscoCSS = "risco-moderado";
+    } else {
+        riscoClinico = "Baixo risco";
+        classeRiscoCSS = "risco-baixo";
+    }
+
+    // Salvar avaliação no histórico
+    if(pacienteSelecionado !== null){
+        const p = pacientes[pacienteSelecionado];
+        if(!p.avaliacoes) p.avaliacoes = [];
+        p.avaliacoes.push({
+            dataHora: new Date().toISOString(),
+            neut: neutV,
+            plat: platV,
+            hb: hbV,
+            tgo: tgoV,
+            tgp: tgpV,
+            bili: biliV,
+            creat: creatV,
+            tfg: tfgV,
+            status: status,
+            risco: riscoClinico
+        });
+        salvarPacientesLS();
+    }
+
+    const r = document.getElementById("resultado");
+    r.style.display = "block";
+
+    if(status === "Apto") r.className = "resultado ok card";
+    else if(status === "Reavaliar") r.className = "resultado alerta card";
+    else r.className = "resultado erro card";
+
+    r.innerHTML = `
+        <h3>Resultado: ${status}</h3>
+        <div class="tag-risco ${classeRiscoCSS}">
+            Classificação de risco: ${riscoClinico}
+        </div>
+        <p><b>Justificativas:</b><br>${justificativas.join("<br>") || "Sem ressalvas adicionais."}</p>
+
+        <button class="btn" onclick="novaAvaliacao()">Nova Avaliação</button>
+        <button class="btn" style="background:#555;" onclick="voltarParaLista()">Voltar para Lista</button>
+        <button class="btn btn-pdf" onclick="gerarPDF('${status}', '${riscoClinico}', \`${justificativas.join('\\n')}\`)">Exportar PDF</button>
+    `;
+}
+
+function novaAvaliacao(){
+    document.getElementById("neut").value  = "";
+    document.getElementById("plat").value  = "";
+    document.getElementById("hb").value    = "";
+    document.getElementById("tgo").value   = "";
+    document.getElementById("tgp").value   = "";
+    document.getElementById("bili").value  = "";
+    document.getElementById("creat").value = "";
+    document.getElementById("tfg").value   = "";
+
+    document.getElementById("resultado").style.display = "none";
+}
+
+function voltarParaLista(){
+    document.getElementById("telaExames").style.display = "none";
+    document.getElementById("resultado").style.display = "none";
+    document.getElementById("cardExamesArquivos").style.display = "none";
+    document.getElementById("telaLista").style.display = "block";
+    novaAvaliacao();
+}
+
+function voltarParaListaSimples(){
+    document.getElementById("telaCadastro").style.display = "none";
+    document.getElementById("telaLista").style.display = "block";
+}
+
+function gerarPDF(status, riscoClinico, texto){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const p = pacientes[pacienteSelecionado];
+
+    doc.setFontSize(18);
+    doc.text("Laudo Pré-Quimioterapia", 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Paciente: ${p.nome}`, 20, 40);
+    doc.text(`Idade: ${p.idade}`, 20, 50);
+    doc.text(`Sexo: ${p.sexo}`, 20, 60);
+    doc.text(`Prontuário: ${p.prontuario}`, 20, 70);
+
+    doc.text(`Status: ${status}`, 20, 90);
+    doc.text(`Classificação de risco: ${riscoClinico}`, 20, 100);
+
+    doc.text("Justificativas:", 20, 120);
+    doc.text(texto || "Sem ressalvas adicionais.", 20, 130);
+
+    doc.text("__________________________________", 20, 260);
+    doc.text("Assinatura / Carimbo", 20, 270);
+
+    doc.save(`Laudo_${p.nome}.pdf`);
+}
+
+// EXAMES (PDF/IMAGEM)
+function atualizarListaExames(){
+    const card = document.getElementById("cardExamesArquivos");
+    const ul = document.getElementById("listaExames");
+
+    if(pacienteSelecionado === null){
+        card.style.display = "none";
+        return;
+    }
+
+    const p = pacientes[pacienteSelecionado];
+    if(!p.exames || p.exames.length === 0){
+        card.style.display = "block";
+        ul.innerHTML = "<li>Nenhum exame anexado ainda.</li>";
+        return;
+    }
+
+    card.style.display = "block";
+
+    let html = "";
+    p.exames.forEach((ex, idx) => {
+        const dataLabel = new Date(ex.dataHora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        html += `
+            <li>
+                <strong>${ex.nome}</strong> (${dataLabel}) 
+                - <a href="${ex.dados}" target="_blank">Ver</a>
+                <button class="btn" style="background:#b30000; padding:4px 8px; font-size:12px;" onclick="removerExame(${idx})">Remover</button>
+            </li>
+        `;
+    });
+
+    ul.innerHTML = html;
+}
+
+function anexarExame(){
+    if(pacienteSelecionado === null){
+        alert("Selecione um paciente primeiro.");
+        return;
+    }
+
+    const input = document.getElementById("inputExame");
+    const file = input.files[0];
+
+    if(!file){
+        alert("Selecione um arquivo para anexar.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const dataUrl = e.target.result;
+        const p = pacientes[pacienteSelecionado];
+
+        if(!p.exames) p.exames = [];
+
+        p.exames.push({
+            nome: file.name,
+            tipo: file.type,
+            dados: dataUrl,
+            dataHora: new Date().toISOString()
+        });
+
+        salvarPacientesLS();
+        atualizarListaExames();
+        input.value = "";
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function removerExame(indice){
+    if(pacienteSelecionado === null) return;
+    const p = pacientes[pacienteSelecionado];
+    if(!p.exames) return;
+
+    if(confirm("Deseja realmente remover este exame?")){
+        p.exames.splice(indice, 1);
+        salvarPacientesLS();
+        atualizarListaExames();
+    }
+}
+
+// EXCLUIR PACIENTE
+function excluirPaciente(i){
+    const p = pacientes[i];
+
+    if(confirm(`Tem certeza que deseja excluir o paciente:\n\n${p.nome}\nProntuário: ${p.prontuario}\n\nEsta ação não pode ser desfeita.`)){
+        pacientes.splice(i, 1);
+        salvarPacientesLS();
+        atualizarLista();
+        alert("Paciente excluído com sucesso.");
+
+        if(pacienteSelecionado === i){
+            pacienteSelecionado = null;
+            document.getElementById("telaExames").style.display = "none";
+            document.getElementById("resultado").style.display = "none";
+            document.getElementById("cardExamesArquivos").style.display = "none";
+            document.getElementById("telaLista").style.display = "block";
+        }
+    }
+}
+</script>
+
+</body>
+</html>
